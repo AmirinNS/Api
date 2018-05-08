@@ -1,6 +1,39 @@
-import urllib, json, sys
+import urllib, json, csv, urllib2, base64
+# Import local file
 import spreadsheet
 
+# Testing server
+from bottle import Bottle, route, run, request, abort, template, error, response, static_file
+
+# All Routes
+
+# Stock Details Data
+@route('/api/stock/data/<stockName>')
+def getStockDetailsData(stockName = 'fbmklci'):
+    stock = read_json(stockName)
+    if stock != None:
+        result = stockDetailsData(stock)
+        return json.dumps(result)
+    else:
+        return json.dumps({})
+
+# Fundamental Trends Data
+@route('/api/stock/trend/<stockName>')
+def getTrendData(stockName):
+    result = read_csv(stockName)
+    if result != None:
+        return template('chart', value=json.dumps(result), chartTitle=stockName)
+    else:
+        return None
+
+# Serve js
+@route('/js/<jsFile>')
+def serve_js_files(jsFile):
+    filePath = './js/'
+    return static_file(jsFile, filePath)
+    
+
+# Get stock data
 def read_json(stockName):
 
     # url string
@@ -11,11 +44,27 @@ def read_json(stockName):
         response = urllib.urlopen(url)
         return json.loads(response.read())
     except:
-        print "Error invalid stock name"
-        sys.exit(1)
+        return None
+
+#  Get fundemental trend data from csv
+def read_csv(stockName):
+
+    # url string
+    url = "http://www.isaham.my/csv/fundamental/%s.csv" % stockName.upper()
+
+    # load url data
+    try:
+        response = urllib2.urlopen(url)
+        cr = csv.reader(response)
+        dataTrend = {}
+        for row in cr:
+            dataTrend[ row.pop(0) ] = row
+        return dataTrend
+    except:
+        return None
 
 # Formatting the fundemental ratio
-def fundamental_ratio_calc (stock):
+def fundamental_ratio (stock):
     #Spreadsheet API
     variableFullName = spreadsheet.fetchSpreadSheet()
     
@@ -23,224 +72,224 @@ def fundamental_ratio_calc (stock):
 
     #PE ratio
     if stock['pe'] < stock['avg_pe']-1:
-        data = {'name': variableFullName['pe'], 'color': 'green', 'val': stock['pe']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['pe'], 'color': '#009900', 'val': stock['pe']} )
+        
     elif stock['pe'] > stock['avg_pe']+1:
-        data = {'name': variableFullName['pe'], 'color': 'red', 'val': stock['pe']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['pe'], 'color': '#ff1a1a', 'val': stock['pe']} )
+        
     else:
-        data = {'name': variableFullName['pe'], 'color': 'black', 'val': stock['pe']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['pe'], 'color': '#000', 'val': stock['pe']} )
+        
 
     # EV / EBITDA
     if stock['ev_ebitda'] < stock['avg_ev_ebitda']-1:
-        data = {'name': variableFullName['ev_ebitda'], 'color': 'green', 'val': stock['ev_ebitda']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['ev_ebitda'], 'color': '#009900', 'val': stock['ev_ebitda']} )
+        
     elif stock['ev_ebitda'] > stock['avg_ev_ebitda']+1:
-        data = {'name': variableFullName['ev_ebitda'], 'color': 'red', 'val': stock['ev_ebitda']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['ev_ebitda'], 'color': '#ff1a1a', 'val': stock['ev_ebitda']} )
+        
     else:
-        data = {'name': variableFullName['ev_ebitda'], 'color': 'black', 'val': stock['ev_ebitda']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['ev_ebitda'], 'color': '#000', 'val': stock['ev_ebitda']} )
+        
 
     # PEG
     if 0 < stock['peg'] < 1.0:
-        data = {'name': variableFullName['peg'], 'color': 'green', 'val': stock['peg']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['peg'], 'color': '#009900', 'val': stock['peg']} )
+        
     elif stock['peg'] > 1.5 or stock['peg'] <= 0:
-        data = {'name': variableFullName['peg'], 'color': 'red', 'val': stock['peg']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['peg'], 'color': '#ff1a1a', 'val': stock['peg']} )
+        
     else:
-        data = {'name': variableFullName['peg'], 'color': 'black', 'val': stock['peg']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['peg'], 'color': '#000', 'val': stock['peg']} )
+        
 
     # Sharpe Ratio (3 yrs)
     if stock['sharpe_ratio_600'] > 0.5:
-        data = {'name': variableFullName['sharpe_ratio_600'], 'color': 'green', 'val': stock['sharpe_ratio_600']}
-        f_ratioArray.append(data) 
+        f_ratioArray.append( {'name': variableFullName['sharpe_ratio_600'], 'color': '#009900', 'val': stock['sharpe_ratio_600']} )
+         
     elif stock['sharpe_ratio_600'] < 0.0:
-        data = {'name': variableFullName['sharpe_ratio_600'], 'color': 'red', 'val': stock['sharpe_ratio_600']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['sharpe_ratio_600'], 'color': '#ff1a1a', 'val': stock['sharpe_ratio_600']} )
+        
     else:
-        data = {'name': variableFullName['sharpe_ratio_600'], 'color': 'black', 'val': stock['sharpe_ratio_600']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['sharpe_ratio_600'], 'color': '#000', 'val': stock['sharpe_ratio_600']} )
+        
 
     # LTS Score
     if stock['lts_score'] > 7.5:
-        data = {'name': variableFullName['lts_score'], 'color': 'green', 'val': stock['lts_score']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['lts_score'], 'color': '#009900', 'val': stock['lts_score']} )
+        
     elif stock['lts_score'] < 4.0:
-        data = {'name': variableFullName['lts_score'], 'color': 'red', 'val': stock['lts_score']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['lts_score'], 'color': '#ff1a1a', 'val': stock['lts_score']} )
+        
     else:
-        data = {'name': variableFullName['lts_score'], 'color': 'black', 'val': stock['lts_score']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['lts_score'], 'color': '#000', 'val': stock['lts_score']} )
+        
 
     # Altman Z
     if stock['z'] > 3:
-        data = {'name': variableFullName['z'], 'color': 'green', 'val': stock['z']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['z'], 'color': '#009900', 'val': stock['z']} )
+        
     elif stock['z'] < 1.8:
-        data = {'name': variableFullName['z'], 'color': 'red', 'val': stock['z']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['z'], 'color': '#ff1a1a', 'val': stock['z']} )
+        
     else:
-        data = {'name': variableFullName['z'], 'color': 'black', 'val': stock['z']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['z'], 'color': '#000', 'val': stock['z']} )
+        
     
     # Beaver
     if stock['beaver'] > 0.06:
-        data = {'name': variableFullName['beaver'], 'color': 'green', 'val': stock['beaver']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['beaver'], 'color': '#009900', 'val': stock['beaver']} )
+        
     elif stock['beaver'] < 0.03:
-        data = {'name': variableFullName['beaver'], 'color': 'red', 'val': stock['beaver']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['beaver'], 'color': '#ff1a1a', 'val': stock['beaver']} )
+        
     else:
-        data = {'name': variableFullName['beaver'], 'color': 'black', 'val': stock['beaver']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['beaver'], 'color': '#000', 'val': stock['beaver']} )
+        
 
     # Current Ratio
     if stock['current_ratio'] > 2:
-        data = {'name': variableFullName['current_ratio'], 'color': 'green', 'val': stock['current_ratio']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['current_ratio'], 'color': '#009900', 'val': stock['current_ratio']} )
+        
     elif stock['current_ratio'] < 1.5:
-        data = {'name': variableFullName['current_ratio'], 'color': 'red', 'val': stock['current_ratio']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['current_ratio'], 'color': '#ff1a1a', 'val': stock['current_ratio']} )
+        
     else:
-        data = {'name': variableFullName['current_ratio'], 'color': 'black', 'val': stock['current_ratio']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['current_ratio'], 'color': '#000', 'val': stock['current_ratio']} )
+        
 
     # Debt / Equity (DE) Ratio
     if stock['de'] < 0.5:
-        data = {'name': variableFullName['de'], 'color': 'green', 'val': stock['de']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['de'], 'color': '#009900', 'val': stock['de']} )
+        
     elif stock['de'] > 1.0:
-        data = {'name': variableFullName['de'], 'color': 'red', 'val': stock['de']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['de'], 'color': '#ff1a1a', 'val': stock['de']} )
+        
     else:
-        data = {'name': variableFullName['de'], 'color': 'black', 'val': stock['de']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['de'], 'color': '#000', 'val': stock['de']} )
+        
 
     # Revenue QoQ
     if stock['revenue_qoq'] > 5:
-        data = {'name': variableFullName['revenue_qoq'], 'color': 'green', 'val': stock['revenue_qoq']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['revenue_qoq'], 'color': '#009900', 'val': stock['revenue_qoq']} )
+        
     elif stock['revenue_qoq'] < 0:
-        data = {'name': variableFullName['revenue_qoq'], 'color': 'red', 'val': stock['revenue_qoq']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['revenue_qoq'], 'color': '#ff1a1a', 'val': stock['revenue_qoq']} )
+        
     else:
-        data = {'name': variableFullName['revenue_qoq'], 'color': 'black', 'val': stock['revenue_qoq']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['revenue_qoq'], 'color': '#000', 'val': stock['revenue_qoq']} )
+        
 
     # Profit QoQ
     if stock['profit_qoq'] > 5 and (stock['opi_qoq']*2.0) > stock['profit_qoq']:
-        data = {'name': variableFullName['profit_qoq'], 'color': 'green', 'val': stock['profit_qoq']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['profit_qoq'], 'color': '#009900', 'val': stock['profit_qoq']} )
+        
     elif stock['profit_qoq'] < 0:
-        data = {'name': variableFullName['profit_qoq'], 'color': 'red', 'val': stock['profit_qoq']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['profit_qoq'], 'color': '#ff1a1a', 'val': stock['profit_qoq']} )
+        
     else:
-        data = {'name': variableFullName['profit_qoq'], 'color': 'black', 'val': stock['profit_qoq']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['profit_qoq'], 'color': '#000', 'val': stock['profit_qoq']} )
+        
 
     # Profit YoY
     if stock['profit_yoy'] > 5:
-        data = {'name': variableFullName['profit_yoy'], 'color': 'green', 'val': stock['profit_yoy']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['profit_yoy'], 'color': '#009900', 'val': stock['profit_yoy']} )
+        
     elif stock['profit_yoy'] < 0:
-        data = {'name': variableFullName['profit_yoy'], 'color': 'red', 'val': stock['profit_yoy']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['profit_yoy'], 'color': '#ff1a1a', 'val': stock['profit_yoy']} )
+        
     else:
-        data = {'name': variableFullName['profit_yoy'], 'color': 'black', 'val': stock['profit_yoy']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['profit_yoy'], 'color': '#000', 'val': stock['profit_yoy']} )
+        
 
     # NTA QoQ
     if stock['ntaps_qoq'] > 5:
-        data = {'name': variableFullName['ntaps_qoq'], 'color': 'green', 'val': stock['ntaps_qoq']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['ntaps_qoq'], 'color': '#009900', 'val': stock['ntaps_qoq']} )
+        
     elif stock['ntaps_qoq'] < 0:
-        data = {'name': variableFullName['ntaps_qoq'], 'color': 'red', 'val': stock['ntaps_qoq']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['ntaps_qoq'], 'color': '#ff1a1a', 'val': stock['ntaps_qoq']} )
+        
     else:
-        data = {'name': variableFullName['ntaps_qoq'], 'color': 'black', 'val': stock['ntaps_qoq']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['ntaps_qoq'], 'color': '#000', 'val': stock['ntaps_qoq']} )
+        
 
     # Profit Margin
     if stock['margin'] > 15:
-        data = {'name': variableFullName['margin'], 'color': 'green', 'val': stock['margin']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['margin'], 'color': '#009900', 'val': stock['margin']} )
+        
     elif stock['margin'] < 5:
-        data = {'name': variableFullName['margin'], 'color': 'red', 'val': stock['margin']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['margin'], 'color': '#ff1a1a', 'val': stock['margin']} )
+        
     else:
-        data = {'name': variableFullName['margin'], 'color': 'black', 'val': stock['margin']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['margin'], 'color': '#000', 'val': stock['margin']} )
+        
 
     # ROE
     if stock['roe'] > 15:
-        data = {'name': variableFullName['roe'], 'color': 'green', 'val': stock['roe']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['roe'], 'color': '#009900', 'val': stock['roe']} )
+        
     elif stock['roe'] < 0.0:
-        data = {'name': variableFullName['roe'], 'color': 'red', 'val': stock['roe']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['roe'], 'color': '#ff1a1a', 'val': stock['roe']} )
+        
     else:
-        data = {'name': variableFullName['roe'], 'color': 'black', 'val': stock['roe']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['roe'], 'color': '#000', 'val': stock['roe']} )
+        
 
     # ROIC
     if stock['roic'] > 15:
-        data = {'name': variableFullName['roe'], 'color': 'green', 'val': stock['roe']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['roe'], 'color': '#009900', 'val': stock['roe']} )
+        
     elif stock['roic'] < 0.0:
-        data = {'name': variableFullName['roe'], 'color': 'red', 'val': stock['roe']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['roe'], 'color': '#ff1a1a', 'val': stock['roe']} )
+        
     else:
-        data = {'name': variableFullName['roe'], 'color': 'black', 'val': stock['roe']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['roe'], 'color': '#000', 'val': stock['roe']} )
+        
 
     # Dividend Per Share (DPS)
-    data = {'name': variableFullName['dps'], 'color': 'black', 'val': stock['dps']}
-    f_ratioArray.append(data)
+    f_ratioArray.append( {'name': variableFullName['dps'], 'color': '#000', 'val': stock['dps']} )
+    
 
     # Dividend Yield (DY)
     if stock['dy'] > 2:
-        data = {'name': variableFullName['dy'], 'color': 'green', 'val': stock['dy']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['dy'], 'color': '#009900', 'val': stock['dy']} )
+        
     elif stock['dy'] < 0:
-        data = {'name': variableFullName['dy'], 'color': 'red', 'val': stock['dy']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['dy'], 'color': '#ff1a1a', 'val': stock['dy']} )
+        
     else:
-        data = {'name': variableFullName['dy'], 'color': 'black', 'val': stock['dy']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['dy'], 'color': '#000', 'val': stock['dy']} )
+        
 
     # FCF Yield
     if stock['fcf_yield'] > 5:
-        data = {'name': variableFullName['fcf_yield'], 'color': 'green', 'val': stock['fcf_yield']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['fcf_yield'], 'color': '#009900', 'val': stock['fcf_yield']} )
+        
     elif stock['fcf_yield'] < 0:
-        data = {'name': variableFullName['fcf_yield'], 'color': 'red', 'val': stock['fcf_yield']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['fcf_yield'], 'color': '#ff1a1a', 'val': stock['fcf_yield']} )
+        
     else:
-        data = {'name': variableFullName['fcf_yield'], 'color': 'black', 'val': stock['fcf_yield']}
-        f_ratioArray.append(data)
+        f_ratioArray.append( {'name': variableFullName['fcf_yield'], 'color': '#000', 'val': stock['fcf_yield']} )
+        
     
     return f_ratioArray
 
 # Formatting Support and Resistance
 def supportResistance(stock):
     snrArray = []
-    for s in stock['support_vop'][::-1]:
-        if s[0] in stock['strong_supports']:
-            snrArray.append( {'price': s[0], 'volume': s[1], 'color': '#DAF7A6'} )
-        else:
-            snrArray.append( {'price': s[0], 'volume': s[1], 'color': '#000'} )
-    
-    snrArray.append( {'price': stock['lp1'], 'volume': '-', 'color': '#FFF9B2'} )
-
-    for s in stock['resistance_vop']:
+    for s in stock['resistance_vop'][::-1]:
         if s[0] in stock['strong_resistances']:
             snrArray.append( {'price': s[0], 'volume': s[1], 'color': '#FFB4B2'} )
         else:
-            snrArray.append( {'price': s[0], 'volume': s[1], 'color': '#000'} )
+            snrArray.append( {'price': s[0], 'volume': s[1], 'color': '#fff'} )
+
+    snrArray.append( {'price': stock['lp1'], 'volume': '-', 'color': '#FFF9B2'} )
+
+    for s in stock['support_vop']:
+        if s[0] in stock['strong_supports']:
+            snrArray.append( {'price': s[0], 'volume': s[1], 'color': '#DAF7A6'} )
+        else:
+            snrArray.append( {'price': s[0], 'volume': s[1], 'color': '#fff'} )
     
     return snrArray
 
@@ -441,31 +490,31 @@ def pivotPoint(stock):
     if abs(stock['lp1'] - stock['pp_r2']) == stock['closest_pivot']:
         pivotArray.append( {'name': 'R2', 'daily':  stock['pp_r2'], 'colorDaily': '#82CAFA'} )
     else:
-        pivotArray.append( {'name': 'R2', 'daily':  stock['pp_r2'], 'colorDaily': '#000'} )
+        pivotArray.append( {'name': 'R2', 'daily':  stock['pp_r2'], 'colorDaily': '#fff'} )
     
     # R1 Daily
     if abs(stock['lp1'] - stock['pp_r1']) == stock['closest_pivot']:
         pivotArray.append( {'name': 'R1', 'daily':  stock['pp_r1'], 'colorDaily': '#82CAFA'} )    
     else:
-        pivotArray.append( {'name': 'R1', 'daily':  stock['pp_r1'], 'colorDaily': '#000'} )
+        pivotArray.append( {'name': 'R1', 'daily':  stock['pp_r1'], 'colorDaily': '#fff'} )
     
     # P Daily
     if abs(stock['lp1'] - stock['pp_base']) == stock['closest_pivot']:
         pivotArray.append( {'name': 'P', 'daily':  stock['pp_base'], 'colorDaily': '#82CAFA'} )
     else:
-        pivotArray.append( {'name': 'P', 'daily':  stock['pp_base'], 'colorDaily': '#000'} )
+        pivotArray.append( {'name': 'P', 'daily':  stock['pp_base'], 'colorDaily': '#fff'} )
 
     # S1 Daily
     if abs(stock['lp1'] - stock['pp_s1']) == stock['closest_pivot']:
         pivotArray.append( {'name': 'S1', 'daily':  stock['pp_s1'], 'colorDaily': '#82CAFA'} )
     else:
-        pivotArray.append( {'name': 'S1', 'daily':  stock['pp_s1'], 'colorDaily': '#000'} )
+        pivotArray.append( {'name': 'S1', 'daily':  stock['pp_s1'], 'colorDaily': '#fff'} )
     
     # S2 Daily
     if abs(stock['lp1'] - stock['pp_s2']) == stock['closest_pivot']:
         pivotArray.append( {'name': 'S2', 'daily':  stock['pp_s2'], 'colorDaily': '#82CAFA'} )        
     else:
-        pivotArray.append( {'name': 'S2', 'daily':  stock['pp_s2'], 'colorDaily': '#000'} ) 
+        pivotArray.append( {'name': 'S2', 'daily':  stock['pp_s2'], 'colorDaily': '#fff'} ) 
     
     # R2 Weekly
     if abs(stock['lp1'] - stock['pp5_r2']) == stock['closest_pivot5']:
@@ -473,7 +522,7 @@ def pivotPoint(stock):
         pivotArray[0]['colorWeekly'] = '#82CAFA'
     else:
         pivotArray[0]['weekly'] = stock['pp5_r2']
-        pivotArray[0]['colorWeekly'] = '#000'
+        pivotArray[0]['colorWeekly'] = '#fff'
 
     # R1 Weekly
     if abs(stock['lp1'] - stock['pp5_r1']) == stock['closest_pivot5']:
@@ -481,7 +530,7 @@ def pivotPoint(stock):
         pivotArray[1]['colorWeekly'] = '#82CAFA'
     else:
         pivotArray[1]['weekly'] = stock['pp5_r1']
-        pivotArray[1]['colorWeekly'] = '#000'
+        pivotArray[1]['colorWeekly'] = '#fff'
     
     # P Weekly
     if abs(stock['lp1'] - stock['pp5_base']) == stock['closest_pivot5']:
@@ -489,7 +538,7 @@ def pivotPoint(stock):
         pivotArray[2]['colorWeekly'] = '#82CAFA'
     else:
         pivotArray[2]['weekly'] = stock['pp5_base']
-        pivotArray[2]['colorWeekly'] = '#000'
+        pivotArray[2]['colorWeekly'] = '#fff'
     
     # S1 Weekly
     if abs(stock['lp1'] - stock['pp5_s1']) == stock['closest_pivot5']:
@@ -497,7 +546,7 @@ def pivotPoint(stock):
         pivotArray[3]['colorWeekly'] = '#82CAFA'        
     else:
         pivotArray[3]['weekly'] = stock['pp5_s1']
-        pivotArray[3]['colorWeekly'] = '#000'    
+        pivotArray[3]['colorWeekly'] = '#fff'    
     
     # S2 Weekly
     if abs(stock['lp1'] - stock['pp5_s2']) == stock['closest_pivot5']:
@@ -505,14 +554,25 @@ def pivotPoint(stock):
         pivotArray[4]['colorWeekly'] = '#82CAFA'        
     else:
         pivotArray[4]['weekly'] = stock['pp5_s2']
-        pivotArray[4]['colorWeekly'] = '#000'    
+        pivotArray[4]['colorWeekly'] = '#fff'    
 
     return pivotArray
 
-stockName = raw_input("Stock Name:")
-stock = read_json(stockName)
-array = pivotPoint(stock)
-# return json.dumps(return_info)
-# array = fundamental_ratio_calc(stock)
-for row in array:
-    print row
+def getChartImage():
+    imgstring = 'iVBORw0KGgoAAAANSUhEUgAAAyEAAAMhCAYAAAD/7r7zAAAgAElEQVR4Xu3XMQ0AAAzDsJU/6bHI5RGoZO3JzhEgQIAAAQIECBAgQCAUWLhligABAgQIECBAgAABAidCPAEBAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQMZzzhwAABIrSURBVIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqmACEm5jREgQIAAAQIECBAgIEL8AAECBAgQIECAAAECqYAISbmNESBAgAABAgQIECAgQvwAAQIECBAgQIAAAQKpgAhJuY0RIECAAAECBAgQICBC/AABAgQIECBAgAABAqnAA+z0AyLxlodYAAAAAElFTkSuQmCC'
+    imgdata = base64.b64decode(imgstring)
+    filename = 'some_image.jpg'  # I assume you have a way of picking unique filenames
+    with open(filename, 'wb') as f:
+        f.write(imgdata)
+
+def stockDetailsData(stockData):
+    data = stockData
+    data['fundamental_ratios'] = fundamental_ratio(stockData)
+    data['support_resistance'] = supportResistance(stockData)
+    data['trading_signals'] = tradingSignals(stockData)
+    data['pivot_point'] = pivotPoint(stockData)
+    data['profit_ma_chart'] = ''
+    data['revenue_ma_chart'] = ''
+    return data
+
+run(host='localhost', port=8080)

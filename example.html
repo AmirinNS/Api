@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="../../../js/Chart.bundle.min.js" ></script>
+    </head>
+    <body>
+        <canvas id="myChart" width="400" height="400"></canvas>
+    </body>
+</html>
+
+<script anythingName="{{value}}">
+    // Search <script> tag in list order
+    data = document.getElementsByTagName("script")[1].getAttribute("anythingName");
+    console.log(JSON.parse(data))
+</script>
+
