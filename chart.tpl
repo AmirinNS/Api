@@ -2,13 +2,15 @@
 <html>
     <head>
         <script src="../../../js/Chart.bundle.min.js" ></script>
+        <script src="../../../js/regression.min.js" ></script>
     </head>
     <body>
-        <canvas id="myChart" width="400" height="400"></canvas>
+        <canvas id="profitMA" width="400" height="400"></canvas>
+        <canvas id="revenueMA" width="400" height="400"></canvas>
     </body>
 </html>
 
-<script anything="{{value}}" chartTitle="{{chartTitle}}">
+<script anything="{{value}}" chartTitle="{{chartTitle}}" >
 
     window.chartColors = {
 	red: 'rgb(255, 99, 132)',
@@ -21,9 +23,10 @@
     };
 
 
-const drawChart = (data, chartTitle) => {
-    var ctx = document.getElementById("myChart").getContext('2d');
-
+const drawChart = (data, chartTitle, chart, data2) => {
+    
+    const result = regression('linear', dataParsed['Profit MA'])
+    var ctx = document.getElementById(chart).getContext('2d');
     var lineChartData = {
         labels: data['Date'],
         datasets: [{
@@ -33,13 +36,15 @@ const drawChart = (data, chartTitle) => {
             fill: false,
             data: data['Profit MA'],
             yAxisID: 'y-axis-1',
+            pointRadius: 0
         }, {
-            label: 'Revenue MA',
+            label: null,
             borderColor: window.chartColors.blue,
             backgroundColor: window.chartColors.blue,
             fill: false,
-            data: data['Revenue MA'],
-            yAxisID: 'y-axis-2'
+            data: data2,
+            yAxisID: 'y-axis-2',
+            pointRadius: 0
         }]
     };
 
@@ -75,12 +80,19 @@ const drawChart = (data, chartTitle) => {
     });
 }
 
-const getChartImage = () => {
-    return url_base64jp = document.getElementById("myChart").toDataURL("image/jpg");
-}
 
-data = document.getElementsByTagName("script")[1].getAttribute("anything");
-title = document.getElementsByTagName("script")[1].getAttribute("chartTitle");
-drawChart(JSON.parse(data), title)
+data = document.getElementsByTagName("script")[2].getAttribute("anything");
+title = document.getElementsByTagName("script")[2].getAttribute("chartTitle");
+dataParsed = JSON.parse(data)
+test = dataParsed['Profit MA']
+mappedAsNumber = test.map( (value, index) => {return [index, Number(value)]});
+console.log(mappedAsNumber)
+const result = regression('linear', mappedAsNumber)
+const gradient = result.equation[0];
+const yIntercept = result.equation[1];
+
+mappedAsNumber2 = result.points.map( (value) => {return value[1]});
+console.log(mappedAsNumber2)
+drawChart(JSON.parse(data), title, "profitMA", mappedAsNumber2)
 
 </script>
