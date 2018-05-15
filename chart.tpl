@@ -3,13 +3,13 @@
     <head>
         <script src="../../../js/Chart.bundle.min.js" ></script>
     </head>
-    <body>
+    <body style="height: 500px; width: 500px;">
         <canvas id="profit_regression" width="200" height="200"></canvas>
         <canvas id="revenue_regression" width="200" height="200"></canvas>
     </body>
 </html>
-
-<script dataFromAPI="{{value}}" >
+<p dataFromAPI="{{value}}"  hidden></p>
+<script>
 
     chartColors = {
 	red: 'rgb(255, 99, 132)',
@@ -23,7 +23,10 @@
 
 
 const drawChart = (data, chartTitle, chartMaType, chartFor, lineColor, ) => {
-
+    // Min number for chart y - axis
+    minNumber = Math.min(...data[chartMaType])
+    if (minNumber < 0)
+        minNumber = 0
     var ctx = document.getElementById(chartFor).getContext('2d');
     var lineChartData = {
         labels: data['Date'],
@@ -36,7 +39,9 @@ const drawChart = (data, chartTitle, chartMaType, chartFor, lineColor, ) => {
                 data: data[chartMaType],
                 pointRadius: 5, 
                 pointBackgroundColor: 'rgba(0, 0, 0, 0)',
-                pointBorderColor: 'rgba(0, 0, 0, 0)'
+                pointBorderColor: 'rgba(0, 0, 0, 0)',
+                pointHoverBackgroundColor: chartColors[lineColor],
+                pointHoverRadius: 5
             }, 
             {
                 label: 'Projection',
@@ -44,7 +49,11 @@ const drawChart = (data, chartTitle, chartMaType, chartFor, lineColor, ) => {
                 backgroundColor: window.chartColors.red,
                 fill: false,
                 data: data[chartFor],
-                pointRadius: 0
+                pointRadius: 5, 
+                pointBackgroundColor: 'rgba(0, 0, 0, 0)',
+                pointBorderColor: 'rgba(0, 0, 0, 0)',
+                pointHoverBackgroundColor: chartColors['red'],
+                pointHoverRadius: 5
             }
         ]
     };
@@ -55,6 +64,9 @@ const drawChart = (data, chartTitle, chartMaType, chartFor, lineColor, ) => {
             responsive: true,
             hoverMode: 'index',
             stacked: false,
+            tooltips: {
+                displayColors: false
+            },
             legend:{
                 display:false
             },
@@ -66,9 +78,6 @@ const drawChart = (data, chartTitle, chartMaType, chartFor, lineColor, ) => {
                 yAxes: [{
                     type: 'linear',
                     display: true,
-                    ticks: {
-                        min: 0
-                    },
                     gridLines: {
                         display: false
                     }
@@ -79,7 +88,7 @@ const drawChart = (data, chartTitle, chartMaType, chartFor, lineColor, ) => {
 }
 
 
-data = document.getElementsByTagName("script")[1].getAttribute("dataFromAPI");
+data = document.getElementsByTagName("p")[0].getAttribute("dataFromAPI");
 dataParsed = JSON.parse(data)
 drawChart(dataParsed, 'Profit Indicator' , 'Profit MA', 'profit_regression', 'blue')
 drawChart(dataParsed, 'Revenue Indicator', 'Revenue MA', 'revenue_regression', 'green')
