@@ -2,17 +2,16 @@
 <html>
     <head>
         <script src="../../../js/Chart.bundle.min.js" ></script>
-        <script src="../../../js/regression.min.js" ></script>
     </head>
     <body>
-        <canvas id="profitMA" width="400" height="400"></canvas>
-        <canvas id="revenueMA" width="400" height="400"></canvas>
+        <canvas id="profit_regression" width="200" height="200"></canvas>
+        <canvas id="revenue_regression" width="200" height="200"></canvas>
     </body>
 </html>
 
-<script anything="{{value}}" chartTitle="{{chartTitle}}" >
+<script dataFromAPI="{{value}}" >
 
-    window.chartColors = {
+    chartColors = {
 	red: 'rgb(255, 99, 132)',
 	orange: 'rgb(255, 159, 64)',
 	yellow: 'rgb(255, 205, 86)',
@@ -23,29 +22,31 @@
     };
 
 
-const drawChart = (data, chartTitle, chart, data2) => {
-    
-    const result = regression('linear', dataParsed['Profit MA'])
-    var ctx = document.getElementById(chart).getContext('2d');
+const drawChart = (data, chartTitle, chartMaType, chartFor, lineColor, ) => {
+
+    var ctx = document.getElementById(chartFor).getContext('2d');
     var lineChartData = {
         labels: data['Date'],
-        datasets: [{
-            label: 'Profit MA',
-            borderColor: window.chartColors.red,
-            backgroundColor: window.chartColors.red,
-            fill: false,
-            data: data['Profit MA'],
-            yAxisID: 'y-axis-1',
-            pointRadius: 0
-        }, {
-            label: null,
-            borderColor: window.chartColors.blue,
-            backgroundColor: window.chartColors.blue,
-            fill: false,
-            data: data2,
-            yAxisID: 'y-axis-2',
-            pointRadius: 0
-        }]
+        datasets: [
+            {
+                label: chartMaType,
+                borderColor: chartColors[lineColor],
+                backgroundColor: chartColors[lineColor],
+                fill: false,
+                data: data[chartMaType],
+                pointRadius: 5, 
+                pointBackgroundColor: 'rgba(0, 0, 0, 0)',
+                pointBorderColor: 'rgba(0, 0, 0, 0)'
+            }, 
+            {
+                label: 'Projection',
+                borderColor: chartColors.red,
+                backgroundColor: window.chartColors.red,
+                fill: false,
+                data: data[chartFor],
+                pointRadius: 0
+            }
+        ]
     };
 
     chartLine = Chart.Line(ctx, {
@@ -54,26 +55,23 @@ const drawChart = (data, chartTitle, chart, data2) => {
             responsive: true,
             hoverMode: 'index',
             stacked: false,
+            legend:{
+                display:false
+            },
             title: {
                 display: true,
                 text: chartTitle
             },
             scales: {
                 yAxes: [{
-                    type: 'linear', // only linear but allow scale type registration. This allows extensions to exist solely for log scale for instance
+                    type: 'linear',
                     display: true,
-                    position: 'left',
-                    id: 'y-axis-1',
-                }, {
-                    type: 'linear', // only linear but allow scale type registration. This allows extensions to exist solely for log scale for instance
-                    display: true,
-                    position: 'right',
-                    id: 'y-axis-2',
-
-                    // grid line settings
-                    gridLines: {
-                        drawOnChartArea: false, // only want the grid lines for one axis to show up
+                    ticks: {
+                        min: 0
                     },
+                    gridLines: {
+                        display: false
+                    }
                 }],
             }
         }
@@ -81,18 +79,8 @@ const drawChart = (data, chartTitle, chart, data2) => {
 }
 
 
-data = document.getElementsByTagName("script")[2].getAttribute("anything");
-title = document.getElementsByTagName("script")[2].getAttribute("chartTitle");
+data = document.getElementsByTagName("script")[1].getAttribute("dataFromAPI");
 dataParsed = JSON.parse(data)
-test = dataParsed['Profit MA']
-mappedAsNumber = test.map( (value, index) => {return [index, Number(value)]});
-console.log(mappedAsNumber)
-const result = regression('linear', mappedAsNumber)
-const gradient = result.equation[0];
-const yIntercept = result.equation[1];
-
-mappedAsNumber2 = result.points.map( (value) => {return value[1]});
-console.log(mappedAsNumber2)
-drawChart(JSON.parse(data), title, "profitMA", mappedAsNumber2)
-
+drawChart(dataParsed, 'Profit Indicator' , 'Profit MA', 'profit_regression', 'blue')
+drawChart(dataParsed, 'Revenue Indicator', 'Revenue MA', 'revenue_regression', 'green')
 </script>
